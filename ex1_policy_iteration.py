@@ -13,7 +13,6 @@ class PolicyIteration:
 
         # self.policy[s, a] = probability of taking action a in state s
         self.policy = np.ones((self.num_states, self.num_actions)) / self.num_actions  # uniform policy
-
         # Extract MDP dynamics from gym environment
 
         # self.P[s', s, a] = P(s' | s, a)
@@ -43,10 +42,26 @@ class PolicyIteration:
         r_pi = np.sum(self.r * self.policy, axis=-1)
 
         v = np.zeros(self.num_states)
-       
-        # TODO: implement iterative policy evaluation
-        
 
+        # TODO: implement iterative policy evaluation
+
+        while True:
+            delta = 0
+
+            for state in range(self.num_states):
+                v_tmp = v[state]
+                sum_tmp = 0
+
+                for state_next in range(self.num_states):
+                    sum_tmp += P_pi[state_next, state] * v[state_next]
+
+                v_next = r_pi[state] + (gamma * sum_tmp)
+                v[state] = v_next
+
+                delta = max(delta, abs(v_tmp - v[state]))
+
+            if delta < theta:
+                break
 
         return v
 
@@ -61,7 +76,17 @@ class PolicyIteration:
 
         # TODO: convert v function to Q function
         # Hint: You'll need the MDP dynamics stored in self.P and self.r
-        Q = ...
+
+        Q = np.zeros((self.num_states, self.num_actions))
+
+        for state in range(self.num_states):
+            for action in range(self.num_actions):
+
+                sum_tmp = 0
+                for state_next in range(self.num_states):
+                    sum_tmp += self.P[state_next, state, action] * v[state_next]
+
+                Q[state][action] = self.r[state, action] + (gamma * sum_tmp)
 
         assert Q.shape == (self.num_states, self.num_actions)
         return Q
@@ -82,7 +107,9 @@ class PolicyIteration:
             Q = self.compute_Q_from_v(v, gamma)
 
             # TODO: Improve policy (i.e., create a new one) by acting greedily w.r.t. Q
-            self.policy = ...
+            self.policy = np.zeros((self.num_states, self.num_actions))
+            self.policy[np.arange(Q.shape[0]), np.argmax(Q, axis = 1)] = 1
+
 
             if np.array_equal(policy_old, self.policy):
                 break

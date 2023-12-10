@@ -53,8 +53,6 @@ class ModelFreeAgent:
                 action = np.random.choice(self.num_actions)
             else:
                 action = np.argmax(self.Q[state])
-
-                print(f'Epsilon greedy policy: {action}')
         else:
             action = np.argmax(self.Q[state])
 
@@ -79,7 +77,7 @@ class ModelFreeAgent:
             self.Q[state, action] = self.Q[state, action] + alpha * (reward + gamma * self.Q[next_state, next_action]
                                                                     - self.Q[state, action])
 
-            raise NotImplementedError(f'{self.algorithm.name} not implemented')
+            #raise NotImplementedError(f'{self.algorithm.name} not implemented')
         elif self.algorithm == RLAlgorithm.Q_LEARNING:
             # TODO: Implement the Q-Learning update.
             # - Q(s, a) = alpha * (reward + gamma * max_a' Q(s', a') - Q(s, a))
@@ -87,12 +85,19 @@ class ModelFreeAgent:
 
             self.Q[state, action] = self.Q[state, action] + alpha * (reward + gamma * np.argmax(self.Q[next_state])
                                                                      - self.Q[state, action])
-            raise NotImplementedError(f'{self.algorithm.name} not implemented')
+            #raise NotImplementedError(f'{self.algorithm.name} not implemented')
         elif self.algorithm == RLAlgorithm.EXPECTED_SARSA:
             # TODO: Implement the Expected SARSA update.
             # - Q(s, a) = alpha * (reward + gamma * E[Q(s', a')] - Q(s, a))
             # - where the expectation E[Q(s', a')] is taken wrt. actions a' of the policy (s' is given by next_state)
-            raise NotImplementedError(f'{self.algorithm.name} not implemented')
+
+           # expected_value = np.sum(self.Q[next_state, :] * (1.0/ self.num_actions))
+            expected_value = np.sum(self.Q[next_state, :]) / self.num_actions
+
+            self.Q[state, action] = self.Q[state, action] + alpha * (reward + gamma * expected_value
+                                                                     - self.Q[state, action])
+
+            #raise NotImplementedError(f'{self.algorithm.name} not implemented')
 
     def run_episode(self, training, render=False):
         """
@@ -183,12 +188,19 @@ if __name__ == '__main__':
         for algo in [RLAlgorithm.SARSA, RLAlgorithm.Q_LEARNING, RLAlgorithm.EXPECTED_SARSA]:
             # TODO: For each algorithm independently, set good values for alpha and eps_decay
             #alpha, eps_decay = None, None
+
             if algo == RLAlgorithm.SARSA:
                 alpha, eps_decay = 0.5, 0.999
+                # za gamma 0.95
+                # 0.1 0.1, 0.1 0.5, 0.1, 0.9, 0.5 0.1, 0.5 0.5, 0.5 0.9, 0.9 0.1, 0.9 0.5, 0.9 0.9 -> ovo je sve nula
+                # 0.10, 0.999 -> avg reward 0.773, 0.5, 0.999 -> avg reward 0.82, 0.9, 0.999 -> avg reward 0.82, 0.7, 0.999-> avg reward  0.802
             elif algo == RLAlgorithm.Q_LEARNING:
-                alpha, eps_decay = 0.999, 0.999
+                alpha, eps_decay = 0.5, 0.999
+                # 0.1 0.1, 0.1 0.5, 0.1, 0.9, 0.5 0.1, 0.5 0.5, 0.5 0.9, 0.9 0.1, 0.9 0.5, 0.9 0.9 -> ovo je sve nula (train and test)
+                # 0.10, 0.999 -> konvergira oko 8000 epis, 0.5, 0.999 -> konvergira oko 7000, 0.9, 0.999 -> konvergira oko 8000, 0.7, 0.999-> konvergia oko 9000
             elif algo == RLAlgorithm.EXPECTED_SARSA:
-                alpha, eps_decay = 0.999, 0.999
+                alpha, eps_decay = 1.0, 1.0
+                # 0.1 0.1, 0.1 0.5, 0.1, 0.9, 0.5 0.1, 0.5 0.5, 0.5 0.9, 0.9 0.1, 0.9 0.5, 0.9 0.9 -> ovo je sve nula (train and test)
 
             train_test_agent(algorithm=algo, gamma=gamma, alpha=alpha, eps=eps, eps_decay=eps_decay,
                              num_train_episodes=10_000, num_test_episodes=5_000,

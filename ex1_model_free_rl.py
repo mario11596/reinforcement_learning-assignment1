@@ -50,10 +50,12 @@ class ModelFreeAgent:
             random_number = np.random.random()
 
             if random_number < self.eps:
+
                 action = np.random.choice(self.num_actions)
             else:
                 action = np.argmax(self.Q[state])
         else:
+
             action = np.argmax(self.Q[state])
 
         return action
@@ -74,8 +76,7 @@ class ModelFreeAgent:
             # TODO: Implement the SARSA update.
             # - Q(s, a) = alpha * (reward + gamma * Q(s', a') - Q(s, a))
 
-            self.Q[state, action] = self.Q[state, action] + alpha * (reward + gamma * self.Q[next_state, next_action]
-                                                                    - self.Q[state, action])
+            self.Q[state, action] = self.Q[state, action] + alpha * (reward + gamma * self.Q[next_state, next_action] - self.Q[state, action])
 
             #raise NotImplementedError(f'{self.algorithm.name} not implemented')
         elif self.algorithm == RLAlgorithm.Q_LEARNING:
@@ -83,8 +84,7 @@ class ModelFreeAgent:
             # - Q(s, a) = alpha * (reward + gamma * max_a' Q(s', a') - Q(s, a))
             # - where the max is taken over all possible actions
 
-            self.Q[state, action] = self.Q[state, action] + alpha * (reward + gamma * np.argmax(self.Q[next_state])
-                                                                     - self.Q[state, action])
+            self.Q[state, action] = self.Q[state, action] + alpha * (reward + gamma * np.argmax(self.Q[next_state]) - self.Q[state, action])
             #raise NotImplementedError(f'{self.algorithm.name} not implemented')
         elif self.algorithm == RLAlgorithm.EXPECTED_SARSA:
             # TODO: Implement the Expected SARSA update.
@@ -94,8 +94,7 @@ class ModelFreeAgent:
            # expected_value = np.sum(self.Q[next_state, :] * (1.0/ self.num_actions))
             expected_value = np.sum(self.Q[next_state, :]) / self.num_actions
 
-            self.Q[state, action] = self.Q[state, action] + alpha * (reward + gamma * expected_value
-                                                                     - self.Q[state, action])
+            self.Q[state, action] = self.Q[state, action] + alpha * (reward + gamma * expected_value - self.Q[state, action])
 
             #raise NotImplementedError(f'{self.algorithm.name} not implemented')
 
@@ -195,11 +194,12 @@ if __name__ == '__main__':
                 # 0.1 0.1, 0.1 0.5, 0.1, 0.9, 0.5 0.1, 0.5 0.5, 0.5 0.9, 0.9 0.1, 0.9 0.5, 0.9 0.9 -> ovo je sve nula
                 # 0.10, 0.999 -> avg reward 0.773, 0.5, 0.999 -> avg reward 0.82, 0.9, 0.999 -> avg reward 0.82, 0.7, 0.999-> avg reward  0.802
             elif algo == RLAlgorithm.Q_LEARNING:
-                alpha, eps_decay = 0.5, 0.999
+                alpha, eps_decay = 0.002, 0.999
                 # 0.1 0.1, 0.1 0.5, 0.1, 0.9, 0.5 0.1, 0.5 0.5, 0.5 0.9, 0.9 0.1, 0.9 0.5, 0.9 0.9 -> ovo je sve nula (train and test)
+                # 0.005, 0.998 -> 0.2 nagrada
                 # 0.10, 0.999 -> konvergira oko 8000 epis, 0.5, 0.999 -> konvergira oko 7000, 0.9, 0.999 -> konvergira oko 8000, 0.7, 0.999-> konvergia oko 9000
             elif algo == RLAlgorithm.EXPECTED_SARSA:
-                alpha, eps_decay = 1.0, 1.0
+                alpha, eps_decay = 0.06, 0.999
                 # 0.1 0.1, 0.1 0.5, 0.1, 0.9, 0.5 0.1, 0.5 0.5, 0.5 0.9, 0.9 0.1, 0.9 0.5, 0.9 0.9 -> ovo je sve nula (train and test)
 
             train_test_agent(algorithm=algo, gamma=gamma, alpha=alpha, eps=eps, eps_decay=eps_decay,

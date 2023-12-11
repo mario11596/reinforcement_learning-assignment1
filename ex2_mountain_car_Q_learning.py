@@ -219,11 +219,11 @@ def train_test_agent(model_type, gamma, alpha, eps, eps_decay,
 
 if __name__ == '__main__':
     eps = 1.0
-    gamma = None
-    eps_decay = None
-    alpha = None
-    num_train_episodes = None
-    max_episode_length = None
+    gamma = 1
+    eps_decay = 0.1
+    alpha = 1
+    num_train_episodes = 100
+    max_episode_length = 100
 
     model_type = ModelType.LINEAR # Task b
     # Task c: model_type = ModelType.NEURAL_NET

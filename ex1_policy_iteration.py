@@ -47,18 +47,18 @@ class PolicyIteration:
 
         while True:
             delta = 0
+            v_tmp = np.copy(v)
 
             for state in range(self.num_states):
-                v_tmp = v[state]
                 sum_tmp = 0
 
                 for state_next in range(self.num_states):
-                    sum_tmp += P_pi[state_next, state] * v[state_next]
+                    sum_tmp += P_pi[state_next, state] * v_tmp[state_next]
 
                 v_next = r_pi[state] + (gamma * sum_tmp)
                 v[state] = v_next
 
-                delta = max(delta, abs(v_tmp - v[state]))
+                delta = max(delta, np.abs(v_tmp[state] - v[state]))
 
             if delta < theta:
                 break
@@ -109,7 +109,6 @@ class PolicyIteration:
             # TODO: Improve policy (i.e., create a new one) by acting greedily w.r.t. Q
             self.policy = np.zeros((self.num_states, self.num_actions))
             self.policy[np.arange(Q.shape[0]), np.argmax(Q, axis = 1)] = 1
-
 
             if np.array_equal(policy_old, self.policy):
                 break

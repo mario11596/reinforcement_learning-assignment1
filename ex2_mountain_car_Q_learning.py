@@ -4,23 +4,29 @@ from mountain_car_utils import plot_results_mountain_car
 from enum import Enum
 import torch
 
+
 def convert(x):
     return torch.tensor(x).float().unsqueeze(0)
+
 
 def update_metrics(metrics, episode):
     for k, v in episode.items():
         metrics[k].append(v)
+
 
 def print_metrics(it, metrics, is_training, window=50):
     reward_mean = np.mean(metrics['reward'][-window:])
     loss_mean = np.mean(metrics['loss'][-window:])
     mode = "train" if is_training else "test"
     steps_to_success = np.mean(metrics['steps_to_success'][-window:])
-    print(f"It {it:4d} | {mode:5s} | reward {reward_mean:5.1f} | loss {loss_mean:5.2f} | steps_to_success {steps_to_success}")
+    print(
+        f"It {it:4d} | {mode:5s} | reward {reward_mean:5.1f} | loss {loss_mean:5.2f} | steps_to_success {steps_to_success}")
+
 
 class ModelType(Enum):
     LINEAR = 'Linear'
     NEURAL_NET = 'Neural Network'
+
 
 class QLearningMountainCarAgent:
     def __init__(self, model_type, alpha, eps, gamma, eps_decay,
@@ -45,8 +51,13 @@ class QLearningMountainCarAgent:
             )
         elif model_type == ModelType.NEURAL_NET:
             # TODO: Implement a neural network with one hidden layer which consists of `self.num_hidden` neurons.
-            self.num_hidden = None
-            raise NotImplementedError('NeuralNet not implemented')
+            self.num_hidden = 64
+            self.Q_model = torch.nn.Sequential(
+                torch.nn.Linear(self.state_dimensions, self.num_hidden),
+                torch.nn.ReLU(),
+                torch.nn.Linear(self.num_hidden, self.num_actions)
+            )
+            # raise NotImplementedError('NeuralNet not implemented')
 
         self.optimizer = torch.optim.Adam(self.Q_model.parameters(), lr=self.alpha)
         self.criterion = torch.nn.MSELoss()
@@ -68,6 +79,17 @@ class QLearningMountainCarAgent:
         # - During the testing phase, we don't need to compute the gradient!
         #   (Hint: use torch.no_grad()). The policy should return torch tensors.
         # - Also, during testing, pick actions deterministically.
+        state = convert(state)
+        if is_training and np.random.rand() < self.eps:
+            action = torch.randint(0, self.num_actions, (1,), dtype=torch.long)
+        elif is_training:
+            q_vals = self.Q_model(state)
+            action = torch.argmax(q_vals).item()
+        else:  # testing
+            with torch.no_grad():
+                q_vals = self.Q_model(state)
+                action = torch.argmax(q_vals).item()
+        return torch.tensor(action)
 
     def compute_loss(self, state, action, reward, next_state, next_action, done):
         """
@@ -89,10 +111,16 @@ class QLearningMountainCarAgent:
         done = torch.tensor(done).int().view(1, 1)
 
         # TODO: Compute Q(s, a) and Q(s', a') for the given state-action pairs.
+        q_val = self.Q_model(state).gather(1, action)
+
         # Detach the gradient of Q(s', a'). Why do we have to do that? Think about
         # the effect of backpropagating through Q(s, a) and Q(s', a') at once!
-
+        with torch.no_grad():
+            q_prim_val = self.Q_model(next_state).gather(1, next_action)
+            q_prim_val = torch.detach(q_prim_val)
         # TODO: Return the loss computed using self.criterion.
+        y = reward + self.gamma * q_prim_val * (1 - done)
+        return self.criterion(q_val, y)
 
     def train_step(self, state, action, reward, next_state, next_action, done):
         """
@@ -115,7 +143,13 @@ class QLearningMountainCarAgent:
 
         # TODO: Implement a custom reward function
         # Right now, we just return the environment reward.
-        return env_reward
+        position, velocity = state
+        goal = 0.5
+        reward = env_reward
+        diff = position - goal
+        reward += 100 * diff + 15 * velocity
+
+        return float(reward)
 
     def run_episode(self, training, render=False):
         """
@@ -153,7 +187,6 @@ class QLearningMountainCarAgent:
 
         # return episode_reward
         return dict(reward=episode_reward, loss=episode_loss / t, steps_to_success=steps_to_success)
-
 
     def train(self):
         """
@@ -212,21 +245,23 @@ def train_test_agent(model_type, gamma, alpha, eps, eps_decay,
                                       max_episode_length=max_episode_length)
     agent.train()
 
-    agent.max_episode_length = 200 # reset max episode length for testing
+    agent.max_episode_length = 200  # reset max episode length for testing
     agent.test(render=render_on_test)
 
     plot_results_mountain_car(agent, savefig=savefig)
 
+
 if __name__ == '__main__':
     eps = 1.0
-    gamma = 1
-    eps_decay = 0.1
-    alpha = 1
-    num_train_episodes = 100
-    max_episode_length = 100
+    gamma = 0.95
+    eps_decay = 0.9995
+    alpha = 0.01
+    num_train_episodes = 2000
+    max_episode_length = 200
 
-    model_type = ModelType.LINEAR # Task b
-    # Task c: model_type = ModelType.NEURAL_NET
+    model_type = ModelType.LINEAR  # Task b
+    # Task c:
+    # model_type = ModelType.NEURAL_NET
 
     train_test_agent(model_type=model_type, gamma=gamma, alpha=alpha, eps=eps, eps_decay=eps_decay,
                      num_train_episodes=num_train_episodes, num_test_episodes=100,
